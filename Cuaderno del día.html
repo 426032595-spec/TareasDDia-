@@ -1,0 +1,885 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cuaderno del día</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una hoja de día. Controles a la izquierda, tarjeta viva a la derecha (apilado en móvil).
+   La línea del horizonte con el sol (lleno = hoy, naciendo = mañana) es la única nota fuerte. */
+:root {
+  --bg: #E3E8E6;
+  --card: #F4F6F4;
+  --ink: #1B2A30;
+  --muted: #566769;
+  --line: #BCC7C5;
+  --accent: #2A6570;
+  --on-accent: #F4F6F4;
+  --sun: #C48535;
+  --display: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1518;
+    --card: #162025;
+    --ink: #E3EAE8;
+    --muted: #95A6A9;
+    --line: #2A393F;
+    --accent: #8CC4C8;
+    --on-accent: #0E1518;
+    --sun: #E2B466;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1518;
+  --card: #162025;
+  --ink: #E3EAE8;
+  --muted: #95A6A9;
+  --line: #2A393F;
+  --accent: #8CC4C8;
+  --on-accent: #0E1518;
+  --sun: #E2B466;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--ui);
+  -webkit-text-size-adjust: 100%;
+}
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+.wrap {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+  padding-block: clamp(24px, 5vw, 56px);
+}
+.head { max-width: 640px; margin-bottom: clamp(20px, 4vw, 36px); }
+h1 {
+  margin: 0 0 10px;
+  font: 500 clamp(2.2rem, 6vw, 3.3rem)/1.04 var(--display);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.lede { margin: 0; color: var(--muted); max-width: 52ch; }
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  gap: clamp(24px, 5vw, 56px);
+  align-items: start;
+}
+.col-edit { min-width: 0; }
+.col-card {
+  min-width: 0;
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+}
+@media (max-width: 880px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .col-card { position: static; }
+}
+
+.sec { padding-block: 26px; border-top: 1px solid var(--line); }
+.sec:first-child { border-top: 0; padding-top: 0; }
+h2 {
+  margin: 0 0 14px;
+  font: 500 12px/1.3 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Para cuándo */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.segbtn {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  text-align: left;
+  padding: 12px 14px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.segbtn svg { grid-row: 1 / 3; }
+.segbtn .seg-t { font-weight: 600; }
+.segbtn .seg-d { font: 400 12px/1.3 var(--mono); color: var(--muted); }
+.segbtn[aria-pressed="true"] {
+  background: var(--card);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.segbtn[aria-pressed="true"] .seg-t { color: var(--accent); }
+.hz { stroke: var(--muted); }
+.s-sun { fill: var(--sun); }
+.s-half { fill: var(--sun); fill-opacity: .28; stroke: var(--sun); stroke-width: 2; }
+.dateline { margin: 16px 0 0; font: italic 400 clamp(1.45rem, 4vw, 1.95rem)/1.2 var(--display); }
+
+/* Lista */
+.addrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.field {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.field::placeholder { color: var(--muted); }
+.btn {
+  padding: 11px 18px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { padding: 7px 12px; font-size: 14px; font-weight: 500; }
+.items { list-style: none; margin: 14px 0 0; padding: 0; }
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.chkwrap { padding: 9px; display: grid; cursor: pointer; }
+.chk {
+  appearance: none; -webkit-appearance: none;
+  width: 26px; height: 26px; margin: 0;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  display: grid; place-content: center;
+  background: transparent;
+  cursor: pointer;
+}
+.chk::after {
+  content: "";
+  width: 12px; height: 6px;
+  border-left: 3px solid var(--on-accent);
+  border-bottom: 3px solid var(--on-accent);
+  transform: rotate(-45deg) translate(1px, -1px) scale(0);
+  transition: transform .12s ease;
+}
+.chk:checked { background: var(--accent); border-color: var(--accent); }
+.chk:checked::after { transform: rotate(-45deg) translate(1px, -1px) scale(1); }
+.itxt {
+  width: 100%; min-width: 0;
+  padding: 10px 4px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+.itxt:focus { outline: none; border-bottom-color: var(--accent); }
+.item.done .itxt { color: var(--muted); text-decoration: line-through; }
+.x {
+  width: 40px; height: 40px;
+  display: grid; place-content: center;
+  background: transparent; border: 0; color: var(--muted);
+  border-radius: 8px; cursor: pointer;
+}
+.x:hover { color: var(--ink); }
+.empty { padding: 18px 0; color: var(--muted); font-style: italic; font-family: var(--display); font-size: 1.1rem; }
+.listfoot { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-top: 12px; }
+.count { margin: 0; font: 400 13px/1.4 var(--mono); color: var(--muted); }
+.hint { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+
+/* Ánimo */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.lbl { display: block; margin: 16px 0 6px; font-size: 14px; color: var(--muted); }
+
+/* Frase */
+.quote {
+  margin: 0;
+  font: italic 400 clamp(1.3rem, 3.6vw, 1.7rem)/1.42 var(--display);
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+.qby { margin: 12px 0 0; font: 400 13px/1.5 var(--mono); color: var(--muted); }
+.qctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+details.lib { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+details.lib > summary { cursor: pointer; font-weight: 500; color: var(--accent); }
+.libfilter { margin: 14px 0 6px; }
+.liblist { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); }
+.libitem { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid var(--line); }
+.libpick {
+  display: block; width: 100%; min-width: 0;
+  text-align: left;
+  padding: 11px 6px 11px 2px;
+  background: transparent; border: 0; cursor: pointer;
+}
+.libpick .lt {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font: italic 400 1.05rem/1.35 var(--display);
+}
+.libpick .la { display: block; margin-top: 2px; font: 400 12px/1.4 var(--mono); color: var(--muted); }
+.libitem.cur .la { color: var(--accent); }
+.libitem.cur .lt::before { content: "● "; color: var(--sun); font-style: normal; }
+.addown { margin-top: 18px; display: grid; gap: 8px; }
+.addown textarea { resize: vertical; min-height: 84px; }
+
+/* Tarjeta */
+.cardhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+#card {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.savebtn { width: 100%; margin-top: 14px; padding: 14px 18px; }
+.msg { min-height: 1.5em; margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.fallback { margin-top: 10px; }
+.fallback img { display: block; max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); }
+.store { margin: 36px 0 0; font: 400 12px/1.5 var(--mono); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <h1>Cuaderno del día</h1>
+    <p class="lede">Una lista corta, una frase que valga la pena y una línea sobre cómo estás. Al final la guardas como imagen.</p>
+  </header>
+
+  <div class="grid">
+    <main class="col-edit">
+
+      <section class="sec" aria-labelledby="h-plan">
+        <h2 id="h-plan">Para cuándo</h2>
+        <div class="seg" role="group" aria-label="Para cuándo es la lista">
+          <button type="button" class="segbtn" id="btnHoy" aria-pressed="true">
+            <svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><line class="hz" x1="2" y1="23" x2="30" y2="23" stroke-width="1.6"/><circle class="s-sun" cx="16" cy="15" r="7"/></svg>
+            <span class="seg-t">Para hoy</span>
+            <span class="seg-d" id="dHoy"></span>
+          </button>
+          <button type="button" class="segbtn" id="btnManana" aria-pressed="false">
+            <svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path class="s-half" d="M9 23a7 7 0 0 1 14 0Z"/><line class="hz" x1="2" y1="23" x2="30" y2="23" stroke-width="1.6"/></svg>
+            <span class="seg-t">Para mañana</span>
+            <span class="seg-d" id="dManana"></span>
+          </button>
+        </div>
+        <p class="dateline" id="dateline"></p>
+      </section>
+
+      <section class="sec" aria-labelledby="h-list">
+        <h2 id="h-list">Lista</h2>
+        <form class="addrow" id="addForm" autocomplete="off">
+          <input class="field" id="newItem" type="text" maxlength="120" placeholder="Algo que quieras hacer" aria-label="Nuevo pendiente">
+          <button class="btn" type="submit">Agregar</button>
+        </form>
+        <ul class="items" id="items"></ul>
+        <div class="listfoot">
+          <p class="count" id="count" aria-live="polite"></p>
+          <button class="btn ghost small" type="button" id="clearDone">Quitar las hechas</button>
+        </div>
+        <p class="hint" id="exHint" hidden>Los pendientes de ejemplo se pueden cambiar o quitar.</p>
+      </section>
+
+      <section class="sec" aria-labelledby="h-mood">
+        <h2 id="h-mood">Cómo te sientes</h2>
+        <div class="chips" id="moods" role="group" aria-label="Cómo te sientes"></div>
+        <label class="lbl" for="note">Una línea, si quieres dejarla escrita</label>
+        <input class="field" id="note" type="text" maxlength="100" placeholder="Hoy estuvo pesado, pero fui a caminar">
+      </section>
+
+      <section class="sec" aria-labelledby="h-quote">
+        <h2 id="h-quote">Frase de la tarjeta</h2>
+        <blockquote class="quote" id="qText"></blockquote>
+        <p class="qby" id="qBy"></p>
+        <div class="qctl">
+          <button class="btn ghost small" type="button" id="qPrev">Anterior</button>
+          <button class="btn small" type="button" id="qNext">Otra</button>
+        </div>
+        <details class="lib">
+          <summary>Biblioteca y tus propias frases</summary>
+          <div class="chips libfilter" id="libFilter" role="group" aria-label="Filtrar biblioteca"></div>
+          <ul class="liblist" id="libList"></ul>
+          <form class="addown" id="ownForm" autocomplete="off">
+            <label class="lbl" for="myQuote" style="margin:0">Agrega una frase o un verso</label>
+            <textarea class="field" id="myQuote" maxlength="400" placeholder="Escríbela como quieras que salga en la tarjeta"></textarea>
+            <input class="field" id="myAuthor" type="text" maxlength="60" placeholder="Autor (opcional)" aria-label="Autor">
+            <button class="btn small" type="submit" style="justify-self:start">Agregar a la biblioteca</button>
+          </form>
+        </details>
+      </section>
+    </main>
+
+    <aside class="col-card" aria-labelledby="h-card">
+      <div class="cardhead"><h2 id="h-card">Tu tarjeta</h2></div>
+      <canvas id="card" width="1080" height="1350" role="img" aria-label="Vista previa de la tarjeta"></canvas>
+      <button class="btn savebtn" type="button" id="saveBtn">Guardar imagen</button>
+      <p class="msg" id="msg" role="status"></p>
+      <div class="fallback" id="fallback" hidden></div>
+    </aside>
+  </div>
+
+  <p class="store" id="store">Se guarda solo en este navegador.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Contenido ---------- */
+  var QUOTES = [
+    { id: 'p1', kind: 'poema', author: 'Jorge Manrique', source: 'Coplas a la muerte de su padre',
+      text: 'Nuestras vidas son los ríos\nque van a dar en la mar,\nque es el morir.' },
+    { id: 'p2', kind: 'poema', author: 'Fray Luis de León', source: 'Vida retirada',
+      text: '¡Qué descansada vida\nla del que huye el mundanal ruido,\ny sigue la escondida\nsenda por donde han ido\nlos pocos sabios que en el mundo han sido!' },
+    { id: 'p3', kind: 'poema', author: 'Francisco de Quevedo', source: 'Amor constante más allá de la muerte',
+      text: 'Polvo serán, mas polvo enamorado.' },
+    { id: 'p4', kind: 'poema', author: 'Amado Nervo', source: 'En paz',
+      text: 'Amé, fui amado, el sol acarició mi faz.\n¡Vida, nada me debes! ¡Vida, estamos en paz!' },
+    { id: 'p5', kind: 'poema', author: 'Gustavo Adolfo Bécquer', source: 'Rima LIII',
+      text: 'Volverán las oscuras golondrinas\nen tu balcón sus nidos a colgar.' },
+    { id: 'p6', kind: 'poema', author: 'Sor Juana Inés de la Cruz', source: 'Éste, que ves, engaño colorido',
+      text: 'es cadáver, es polvo, es sombra, es nada.' },
+    { id: 'p7', kind: 'poema', author: 'Pedro Calderón de la Barca', source: 'La vida es sueño',
+      text: 'una sombra, una ficción,\ny el mayor bien es pequeño;\nque toda la vida es sueño,\ny los sueños, sueños son.' },
+    { id: 't1', kind: 'pensamiento', author: 'Marco Aurelio', source: 'Meditaciones, V, 16 · versión libre',
+      text: 'Tal como son tus pensamientos habituales, tal será tu mente; porque el alma se tiñe del color de sus pensamientos.' },
+    { id: 't2', kind: 'pensamiento', author: 'Marco Aurelio', source: 'Meditaciones, X, 16 · versión libre',
+      text: 'No gastes más tiempo discutiendo cómo debe ser una buena persona. Sé una.' },
+    { id: 't3', kind: 'pensamiento', author: 'Séneca', source: 'Sobre la brevedad de la vida, I · versión libre',
+      text: 'No es que tengamos poco tiempo: es que perdemos mucho.' },
+    { id: 't4', kind: 'pensamiento', author: 'Séneca', source: 'Cartas a Lucilio, I · versión libre',
+      text: 'Mientras se aplaza la vida, la vida pasa.' },
+    { id: 't5', kind: 'pensamiento', author: 'Epicteto', source: 'Enquiridión, 5 · versión libre',
+      text: 'Lo que perturba a las personas no son las cosas, sino los juicios que hacen sobre ellas.' },
+    { id: 't6', kind: 'pensamiento', author: 'Heráclito (atribuido)', source: '',
+      text: 'Nadie se baña dos veces en el mismo río.' },
+    { id: 't7', kind: 'pensamiento', author: 'Michel de Montaigne', source: 'Ensayos, II, 12',
+      text: '¿Qué sé yo?' },
+    { id: 't8', kind: 'pensamiento', author: 'Blaise Pascal', source: 'Pensamientos · versión libre',
+      text: 'Toda la desdicha de los hombres viene de una sola cosa: no saber quedarse quietos en una habitación.' },
+    { id: 't9', kind: 'pensamiento', author: 'Eclesiastés 3:1', source: 'versión libre',
+      text: 'Todo tiene su momento, y cada cosa bajo el cielo tiene su hora.' },
+    { id: 'c1', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Hoy no tiene que ser extraordinario. Alcanza con que sea habitado.' },
+    { id: 'c2', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'El cansancio también informa. Escúchalo antes de discutirle.' },
+    { id: 'c3', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'No todo se resuelve. Algunas cosas solo se aprenden a cargar con más cuidado.' },
+    { id: 'c4', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Lo que hoy no alcanzaste sigue siendo posible mañana, sin volverse urgente.' },
+    { id: 'c5', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Una lista es una promesa pequeña. Hazla del tamaño que puedas cumplir.' },
+    { id: 'c6', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Hay días que solo se atraviesan. También cuentan.' },
+    { id: 'c7', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Mirar con atención ya es una manera de hacer algo.' },
+    { id: 'c8', kind: 'cuaderno', author: '', source: 'Del cuaderno',
+      text: 'Estar triste no es un error. A veces es la medida exacta de lo que importaba.' }
+  ];
+  var KIND_LABEL = { all: 'Todas', poema: 'Poemas', pensamiento: 'Pensamientos', cuaderno: 'Del cuaderno', tuya: 'Tuyas' };
+  var MOODS = ['Sereno', 'Con calma', 'Contento', 'Agradecido', 'Cansado', 'Disperso', 'Inquieto', 'Triste', 'Irritado', 'Apagado'];
+  var MAX_ITEMS = 30;
+  var LS_KEY = 'cuaderno-del-dia-v1';
+  var ICON_X = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>';
+
+  /* ---------- Fechas ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function fromISO(s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function todayISO() { return iso(new Date()); }
+  function addDays(s, n) { var d = fromISO(s); d.setDate(d.getDate() + n); return iso(d); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  var fWd = new Intl.DateTimeFormat('es-MX', { weekday: 'long' });
+  var fRest = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  var fShort = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+  function dateParts(s) { var d = fromISO(s); return { wd: cap(fWd.format(d)), rest: fRest.format(d), short: fShort.format(d) }; }
+
+  /* ---------- Estado ---------- */
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function normalize(s) {
+    var t = todayISO(), tm = addDays(t, 1);
+    var out = { v: 1, planDate: t, items: [], mood: '', note: '', quoteId: '', custom: [], updatedAt: 0 };
+    if (!s || typeof s !== 'object') return out;
+    if (typeof s.planDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.planDate)) {
+      out.planDate = s.planDate < t ? t : (s.planDate > tm ? tm : s.planDate);
+    }
+    if (Array.isArray(s.items)) {
+      out.items = s.items.filter(function (i) { return i && typeof i.t === 'string'; }).slice(0, MAX_ITEMS).map(function (i) {
+        return { id: String(i.id || uid()), t: i.t.slice(0, 120), d: !!i.d, ex: !!i.ex };
+      });
+    }
+    if (MOODS.indexOf(s.mood) >= 0) out.mood = s.mood;
+    if (typeof s.note === 'string') out.note = s.note.slice(0, 100);
+    if (typeof s.quoteId === 'string') out.quoteId = s.quoteId;
+    if (Array.isArray(s.custom)) {
+      out.custom = s.custom.filter(function (c) { return c && typeof c.text === 'string' && c.text.trim(); }).slice(0, 40).map(function (c) {
+        return { id: String(c.id || 'u' + uid()), text: c.text.slice(0, 400), author: String(c.author || '').slice(0, 60) };
+      });
+    }
+    out.updatedAt = Number(s.updatedAt) || 0;
+    return out;
+  }
+  function defaultState() {
+    var s = normalize(null);
+    s.items = [
+      { id: uid(), t: 'Leer veinte minutos', d: false, ex: true },
+      { id: uid(), t: 'Caminar sin el celular', d: false, ex: true },
+      { id: uid(), t: 'Escribirle a alguien que extraño', d: false, ex: true }
+    ];
+    return s;
+  }
+  function loadLocal() {
+    try { var raw = localStorage.getItem(LS_KEY); if (raw) { var s = JSON.parse(raw); if (s && s.v === 1) return s; } } catch (e) {}
+    return null;
+  }
+  var state = (function () { var l = loadLocal(); return l ? normalize(l) : defaultState(); })();
+
+  /* ---------- Guardado ---------- */
+  var dbRef = null, saveTimer = null, saving = false, dirty = false, dbFailed = false;
+  function persistLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+  function scheduleSave() {
+    state.updatedAt = Date.now();
+    persistLocal();
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 700);
+  }
+  function flush() {
+    if (!dbRef || saving || !dirty || dbFailed) return;
+    saving = true; dirty = false;
+    var body = JSON.parse(JSON.stringify(state));
+    dbRef.set(body).then(function () { saving = false; if (dirty) saveTimer = setTimeout(flush, 700); })
+      .catch(function () { saving = false; dbFailed = true; setStore('Se guarda solo en este navegador. Si lo borras, se pierde.'); });
+  }
+  function setStore(t) { document.getElementById('store').textContent = t; }
+
+  /* ---------- Elementos ---------- */
+  function $(id) { return document.getElementById(id); }
+  var els = {
+    btnHoy: $('btnHoy'), btnManana: $('btnManana'), dHoy: $('dHoy'), dManana: $('dManana'), dateline: $('dateline'),
+    addForm: $('addForm'), newItem: $('newItem'), items: $('items'), count: $('count'), clearDone: $('clearDone'), exHint: $('exHint'),
+    moods: $('moods'), note: $('note'),
+    qText: $('qText'), qBy: $('qBy'), qPrev: $('qPrev'), qNext: $('qNext'), libFilter: $('libFilter'), libList: $('libList'),
+    ownForm: $('ownForm'), myQuote: $('myQuote'), myAuthor: $('myAuthor'),
+    card: $('card'), saveBtn: $('saveBtn'), msg: $('msg'), fallback: $('fallback')
+  };
+
+  /* ---------- Frases ---------- */
+  function allQuotes() {
+    return QUOTES.concat(state.custom.map(function (c) { return { id: c.id, kind: 'tuya', author: c.author, source: '', text: c.text }; }));
+  }
+  function hashStr(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
+  function currentQuote() {
+    var all = allQuotes();
+    var q = all.filter(function (x) { return x.id === state.quoteId; })[0];
+    return q || all[hashStr(state.planDate) % all.length];
+  }
+  function byText(q) { return [q.author, q.source].filter(Boolean).join(' · '); }
+  function stepQuote(dir) {
+    var all = allQuotes();
+    var cur = currentQuote();
+    var i = all.indexOf(cur);
+    var n = all[(i + dir + all.length) % all.length];
+    state.quoteId = n.id;
+    scheduleSave();
+    renderQuote(); renderLibrary(); drawCard();
+  }
+
+  /* ---------- Render: interfaz ---------- */
+  function renderPlan() {
+    var t = todayISO(), tm = addDays(t, 1);
+    var isToday = state.planDate === t;
+    els.btnHoy.setAttribute('aria-pressed', String(isToday));
+    els.btnManana.setAttribute('aria-pressed', String(!isToday));
+    els.dHoy.textContent = dateParts(t).short;
+    els.dManana.textContent = dateParts(tm).short;
+    var p = dateParts(state.planDate);
+    els.dateline.textContent = p.wd + ' ' + p.rest;
+  }
+  function renderItems() {
+    var ae = document.activeElement;
+    var fk = ae && ae.dataset ? ae.dataset.fk : null;
+    els.items.textContent = '';
+    if (!state.items.length) {
+      var e = document.createElement('li'); e.className = 'empty';
+      e.textContent = 'Aún no hay nada en la lista. Escribe el primer pendiente arriba.';
+      els.items.appendChild(e);
+    }
+    state.items.forEach(function (it) {
+      var li = document.createElement('li');
+      li.className = 'item' + (it.d ? ' done' : '');
+      li.dataset.id = it.id;
+      var lab = document.createElement('label'); lab.className = 'chkwrap';
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'chk'; cb.checked = it.d;
+      cb.setAttribute('aria-label', 'Marcar como hecho'); cb.dataset.fk = 'chk:' + it.id;
+      lab.appendChild(cb);
+      var tx = document.createElement('input'); tx.type = 'text'; tx.className = 'itxt'; tx.value = it.t; tx.maxLength = 120;
+      tx.setAttribute('aria-label', 'Pendiente'); tx.dataset.fk = 'txt:' + it.id;
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'x';
+      x.setAttribute('aria-label', 'Quitar pendiente'); x.dataset.fk = 'del:' + it.id; x.innerHTML = ICON_X;
+      li.appendChild(lab); li.appendChild(tx); li.appendChild(x);
+      els.items.appendChild(li);
+    });
+    renderCount();
+    if (fk) { var el = els.items.querySelector('[data-fk="' + fk + '"]'); if (el) el.focus(); }
+  }
+  function renderCount() {
+    var n = state.items.length, d = state.items.filter(function (i) { return i.d; }).length;
+    els.count.textContent = n ? d + ' de ' + n + (n === 1 ? ' hecha' : ' hechas') : '';
+    els.clearDone.hidden = d === 0;
+    els.exHint.hidden = !state.items.some(function (i) { return i.ex; });
+  }
+  function renderMoods() {
+    els.moods.textContent = '';
+    MOODS.forEach(function (m) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = m;
+      b.setAttribute('aria-pressed', String(state.mood === m)); b.dataset.mood = m;
+      els.moods.appendChild(b);
+    });
+    els.note.value = state.note;
+  }
+  function renderQuote() {
+    var q = currentQuote();
+    els.qText.textContent = q.text;
+    els.qBy.textContent = byText(q);
+  }
+  var libFilter = 'all';
+  function renderLibrary() {
+    var all = allQuotes(), cur = currentQuote();
+    var kinds = ['all', 'poema', 'pensamiento', 'cuaderno'];
+    if (state.custom.length) kinds.push('tuya');
+    if (kinds.indexOf(libFilter) < 0) libFilter = 'all';
+    els.libFilter.textContent = '';
+    kinds.forEach(function (k) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = KIND_LABEL[k];
+      b.dataset.kind = k; b.setAttribute('aria-pressed', String(libFilter === k));
+      els.libFilter.appendChild(b);
+    });
+    els.libList.textContent = '';
+    all.filter(function (q) { return libFilter === 'all' || q.kind === libFilter; }).forEach(function (q) {
+      var li = document.createElement('li'); li.className = 'libitem' + (q === cur || q.id === cur.id ? ' cur' : '');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'libpick'; b.dataset.qid = q.id;
+      var lt = document.createElement('span'); lt.className = 'lt'; lt.textContent = q.text.replace(/\n/g, ' ');
+      var la = document.createElement('span'); la.className = 'la'; la.textContent = byText(q) || KIND_LABEL[q.kind];
+      b.appendChild(lt); b.appendChild(la); li.appendChild(b);
+      if (q.kind === 'tuya') {
+        var r = document.createElement('button'); r.type = 'button'; r.className = 'x'; r.dataset.rmq = q.id;
+        r.setAttribute('aria-label', 'Quitar de la biblioteca'); r.innerHTML = ICON_X; li.appendChild(r);
+      }
+      els.libList.appendChild(li);
+    });
+  }
+
+  /* ---------- Render: tarjeta ---------- */
+  var W = 1080, PADX = 88, PADB = 100, MINH = 1350;
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function setLS(ctx, v) { if ('letterSpacing' in ctx) ctx.letterSpacing = v; }
+  function wrap(ctx, text, maxW) {
+    var out = [];
+    String(text).split('\n').forEach(function (par) {
+      var words = par.split(/\s+/).filter(Boolean);
+      if (!words.length) { out.push(''); return; }
+      var line = '';
+      words.forEach(function (w) {
+        var t = line ? line + ' ' + w : w;
+        if (ctx.measureText(t).width <= maxW) { line = t; return; }
+        if (line) { out.push(line); line = ''; }
+        if (ctx.measureText(w).width <= maxW) { line = w; return; }
+        var chunk = '';
+        Array.from(w).forEach(function (ch) {
+          if (ctx.measureText(chunk + ch).width > maxW) { out.push(chunk); chunk = ch; } else { chunk += ch; }
+        });
+        line = chunk;
+      });
+      if (line) out.push(line);
+    });
+    return out.length ? out : [''];
+  }
+  function drawCard() {
+    var c = els.card; if (!c) return;
+    var ctx = c.getContext('2d');
+    var col = { card: cssVar('--card'), ink: cssVar('--ink'), muted: cssVar('--muted'), line: cssVar('--line'), accent: cssVar('--accent'), sun: cssVar('--sun'), on: cssVar('--on-accent') };
+    var F = { d: 'Newsreader, Georgia, serif', u: '"Instrument Sans", system-ui, sans-serif', m: '"IBM Plex Mono", ui-monospace, Menlo, monospace' };
+    var IW = W - PADX * 2;
+    var isToday = state.planDate === todayISO();
+    var dp = dateParts(state.planDate);
+    var q = currentQuote();
+
+    // medidas
+    ctx.font = '400 36px ' + F.u;
+    var rows = state.items.map(function (it) { return { it: it, lines: wrap(ctx, it.t, IW - 64) }; });
+    var listH = 0; rows.forEach(function (r) { listH += r.lines.length * 46 + 28; });
+    if (!rows.length) listH = 64;
+    ctx.font = '400 32px ' + F.u;
+    var noteLines = state.note ? wrap(ctx, state.note, IW) : [];
+    var hasMood = !!(state.mood || state.note);
+    var moodH = hasMood ? 44 + (state.mood ? 76 : 0) + noteLines.length * 44 : 0;
+    ctx.font = 'italic 400 46px ' + F.d;
+    var qLines = wrap(ctx, q.text, IW);
+    ctx.font = '400 24px ' + F.m;
+    var byLines = wrap(ctx, byText(q), IW);
+    var qH = 4 + 44 + qLines.length * 64 + 30 + byLines.length * 34;
+    var top = 430, labelH = 64;
+    var natural = top + labelH + listH + (hasMood ? 56 + moodH : 0) + 56 + qH + PADB;
+    var H = Math.max(MINH, natural);
+    c.width = W; c.height = H;
+
+    ctx.fillStyle = col.card; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+
+    // sello y horizonte
+    setLS(ctx, '6px'); ctx.font = '500 26px ' + F.m; ctx.fillStyle = col.accent;
+    ctx.fillText(isToday ? 'PARA HOY' : 'PARA MAÑANA', PADX, 118); setLS(ctx, '0px');
+    var hy = 214, sx = W - PADX - 64, r = 46;
+    if (isToday) {
+      ctx.fillStyle = col.sun; ctx.beginPath(); ctx.arc(sx, hy - r - 6, r, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, hy); ctx.clip();
+      ctx.globalAlpha = 0.28; ctx.fillStyle = col.sun; ctx.beginPath(); ctx.arc(sx, hy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = col.sun; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(sx, hy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.strokeStyle = col.line; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PADX, hy); ctx.lineTo(W - PADX, hy); ctx.stroke();
+
+    // fecha
+    ctx.fillStyle = col.ink; ctx.font = 'italic 400 88px ' + F.d; ctx.fillText(dp.wd, PADX, 326);
+    setLS(ctx, '3px'); ctx.font = '400 28px ' + F.m; ctx.fillStyle = col.muted; ctx.fillText(dp.rest.toUpperCase(), PADX, 382); setLS(ctx, '0px');
+
+    // lista
+    var y = top;
+    setLS(ctx, '5px'); ctx.font = '500 22px ' + F.m; ctx.fillStyle = col.muted; ctx.fillText('LISTA', PADX, y + 22); setLS(ctx, '0px');
+    var done = state.items.filter(function (i) { return i.d; }).length;
+    if (rows.length) { ctx.textAlign = 'right'; ctx.font = '400 22px ' + F.m; ctx.fillText(done + ' de ' + rows.length + (rows.length === 1 ? ' hecha' : ' hechas'), W - PADX, y + 22); ctx.textAlign = 'left'; }
+    y += labelH;
+    rows.forEach(function (rw) {
+      var cx = PADX + 18, cy = y + 22;
+      if (rw.it.d) {
+        ctx.fillStyle = col.accent; ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = col.on; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(cx - 8, cy + 1); ctx.lineTo(cx - 2, cy + 7); ctx.lineTo(cx + 9, cy - 6); ctx.stroke();
+      } else {
+        ctx.strokeStyle = col.muted; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, 17, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.font = '400 36px ' + F.u; ctx.fillStyle = rw.it.d ? col.muted : col.ink;
+      rw.lines.forEach(function (ln, i) {
+        var by = y + 34 + i * 46;
+        ctx.fillText(ln, PADX + 64, by);
+        if (rw.it.d) {
+          var w = ctx.measureText(ln).width;
+          ctx.strokeStyle = col.muted; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PADX + 64, by - 12); ctx.lineTo(PADX + 64 + w, by - 12); ctx.stroke();
+        }
+      });
+      y += rw.lines.length * 46 + 28;
+    });
+    if (!rows.length) { ctx.font = 'italic 400 38px ' + F.d; ctx.fillStyle = col.muted; ctx.fillText('Sin pendientes por ahora.', PADX, y + 36); }
+    y += 0;
+
+    // ánimo
+    if (hasMood) {
+      y = top + labelH + listH + 56;
+      setLS(ctx, '5px'); ctx.font = '500 22px ' + F.m; ctx.fillStyle = col.muted; ctx.fillText('CÓMO ME SIENTO', PADX, y + 22); setLS(ctx, '0px');
+      var ty = y + 44;
+      if (state.mood) { ctx.font = 'italic 400 60px ' + F.d; ctx.fillStyle = col.ink; ctx.fillText(state.mood, PADX, ty + 54); ty += 76; }
+      ctx.font = '400 32px ' + F.u; ctx.fillStyle = col.muted;
+      noteLines.forEach(function (ln, i) { ctx.fillText(ln, PADX, ty + 30 + i * 44); });
+    }
+
+    // frase, anclada abajo
+    var qTop = H - PADB - qH;
+    ctx.fillStyle = col.accent; ctx.fillRect(PADX, qTop, 72, 4);
+    var y0 = qTop + 4 + 44;
+    ctx.font = 'italic 400 46px ' + F.d; ctx.fillStyle = col.ink;
+    qLines.forEach(function (ln, i) { ctx.fillText(ln, PADX, y0 + 44 + i * 64); });
+    var y1 = y0 + qLines.length * 64 + 30;
+    ctx.font = '400 24px ' + F.m; ctx.fillStyle = col.muted;
+    byLines.forEach(function (ln, i) { ctx.fillText(ln, PADX, y1 + 22 + i * 34); });
+
+    c.setAttribute('aria-label', 'Vista previa de la tarjeta. ' + (isToday ? 'Para hoy' : 'Para mañana') + ', ' + dp.wd + ' ' + dp.rest + '. ' +
+      state.items.length + (state.items.length === 1 ? ' pendiente.' : ' pendientes.'));
+  }
+
+  function renderAll() { renderPlan(); renderItems(); renderMoods(); renderQuote(); renderLibrary(); drawCard(); }
+
+  /* ---------- Eventos ---------- */
+  function setPlan(isToday) {
+    var t = todayISO(), next = isToday ? t : addDays(t, 1);
+    if (state.planDate === next) return;
+    state.planDate = next; scheduleSave(); renderPlan(); renderQuote(); renderLibrary(); drawCard();
+  }
+  els.btnHoy.addEventListener('click', function () { setPlan(true); });
+  els.btnManana.addEventListener('click', function () { setPlan(false); });
+
+  els.addForm.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var t = els.newItem.value.trim();
+    if (!t) return;
+    if (state.items.length >= MAX_ITEMS) { setMsg('La lista admite hasta ' + MAX_ITEMS + ' pendientes. Quita alguno para agregar otro.'); return; }
+    state.items.push({ id: uid(), t: t.slice(0, 120), d: false, ex: false });
+    els.newItem.value = '';
+    scheduleSave(); renderItems(); drawCard(); els.newItem.focus();
+  });
+  function itemById(id) { return state.items.filter(function (i) { return i.id === id; })[0]; }
+  els.items.addEventListener('change', function (ev) {
+    var li = ev.target.closest('.item'); if (!li || !ev.target.classList.contains('chk')) return;
+    var it = itemById(li.dataset.id); if (!it) return;
+    it.d = ev.target.checked; scheduleSave(); li.classList.toggle('done', it.d); renderCount(); drawCard();
+  });
+  els.items.addEventListener('input', function (ev) {
+    var li = ev.target.closest('.item'); if (!li || !ev.target.classList.contains('itxt')) return;
+    var it = itemById(li.dataset.id); if (!it) return;
+    it.t = ev.target.value; it.ex = false; scheduleSave(); renderCount(); drawCard();
+  });
+  els.items.addEventListener('focusout', function (ev) {
+    var li = ev.target.closest && ev.target.closest('.item'); if (!li || !ev.target.classList.contains('itxt')) return;
+    if (ev.target.value.trim()) return;
+    state.items = state.items.filter(function (i) { return i.id !== li.dataset.id; });
+    scheduleSave(); renderItems(); drawCard();
+  });
+  els.items.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' && ev.target.classList.contains('itxt')) { ev.preventDefault(); els.newItem.focus(); }
+  });
+  els.items.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.x'); if (!b) return;
+    var li = b.closest('.item'); if (!li) return;
+    state.items = state.items.filter(function (i) { return i.id !== li.dataset.id; });
+    scheduleSave(); renderItems(); drawCard(); els.newItem.focus();
+  });
+  els.clearDone.addEventListener('click', function () {
+    state.items = state.items.filter(function (i) { return !i.d; });
+    scheduleSave(); renderItems(); drawCard();
+  });
+
+  els.moods.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.chip'); if (!b) return;
+    var m = b.dataset.mood;
+    state.mood = state.mood === m ? '' : m;
+    scheduleSave(); Array.prototype.forEach.call(els.moods.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.mood === state.mood)); });
+    drawCard();
+  });
+  els.note.addEventListener('input', function () { state.note = els.note.value.slice(0, 100); scheduleSave(); drawCard(); });
+
+  els.qPrev.addEventListener('click', function () { stepQuote(-1); });
+  els.qNext.addEventListener('click', function () { stepQuote(1); });
+  els.libFilter.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.chip'); if (!b) return; libFilter = b.dataset.kind; renderLibrary();
+  });
+  els.libList.addEventListener('click', function (ev) {
+    var rm = ev.target.closest('[data-rmq]');
+    if (rm) {
+      var id = rm.dataset.rmq;
+      state.custom = state.custom.filter(function (c) { return c.id !== id; });
+      if (state.quoteId === id) state.quoteId = '';
+      scheduleSave(); renderQuote(); renderLibrary(); drawCard(); return;
+    }
+    var pick = ev.target.closest('[data-qid]'); if (!pick) return;
+    state.quoteId = pick.dataset.qid; scheduleSave(); renderQuote(); renderLibrary(); drawCard();
+  });
+  els.ownForm.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var t = els.myQuote.value.trim(); if (!t) return;
+    var c = { id: 'u' + uid(), text: t.slice(0, 400), author: els.myAuthor.value.trim().slice(0, 60) };
+    state.custom.push(c); state.quoteId = c.id;
+    els.myQuote.value = ''; els.myAuthor.value = '';
+    libFilter = 'tuya';
+    scheduleSave(); renderQuote(); renderLibrary(); drawCard();
+  });
+
+  /* ---------- Guardar imagen ---------- */
+  var fbUrl = null;
+  function setMsg(t) { els.msg.textContent = t; }
+  function showFallback(blob) {
+    if (fbUrl) URL.revokeObjectURL(fbUrl);
+    fbUrl = URL.createObjectURL(blob);
+    els.fallback.textContent = '';
+    var img = document.createElement('img'); img.src = fbUrl; img.alt = 'Tu tarjeta como imagen';
+    var p = document.createElement('p'); p.className = 'msg'; p.textContent = 'Mantén presionada la imagen, o haz clic derecho, y elige guardar.';
+    els.fallback.appendChild(img); els.fallback.appendChild(p); els.fallback.hidden = false;
+  }
+  function saveImage() {
+    els.fallback.hidden = true;
+    setMsg('Preparando la imagen…');
+    drawCard();
+    els.card.toBlob(function (blob) {
+      if (!blob) { setMsg('No se pudo crear la imagen. Intenta de nuevo.'); return; }
+      var name = 'cuaderno-' + state.planDate + '.png';
+      var useDl = (window.claude && window.claude.use) ? window.claude.use('downloads') : Promise.resolve(null);
+      useDl.catch(function () { return null; }).then(function (dl) {
+        if (!dl) { setMsg('Aquí no se puede descargar directo.'); showFallback(blob); return; }
+        dl.save({ filename: name, data: blob }).then(function () {
+          setMsg('Imagen guardada.');
+        }).catch(function (e) {
+          var code = e && e.code;
+          if (code === 'declined') { setMsg('Cancelaste el guardado.'); return; }
+          if (code === 'rate_limited') { setMsg('Espera un momento y vuelve a intentar.'); return; }
+          setMsg('No se pudo descargar aquí.'); showFallback(blob);
+        });
+      });
+    }, 'image/png');
+  }
+  els.saveBtn.addEventListener('click', saveImage);
+
+  /* ---------- Arranque ---------- */
+  renderAll();
+
+  var fontSpecs = ['400 36px "Instrument Sans"', '400 32px "Instrument Sans"', 'italic 400 46px Newsreader', 'italic 400 88px Newsreader', '400 24px "IBM Plex Mono"', '500 24px "IBM Plex Mono"'];
+  if (document.fonts && document.fonts.load) {
+    Promise.all(fontSpecs.map(function (f) { return document.fonts.load(f); })).then(drawCard).catch(function () {});
+    if (document.fonts.ready) document.fonts.ready.then(drawCard);
+  }
+  try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawCard); } catch (e) {}
+  try { new MutationObserver(drawCard).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) {}
+
+  var lastToday = todayISO();
+  setInterval(function () {
+    var t = todayISO();
+    if (t === lastToday) return;
+    lastToday = t;
+    var n = normalize(state); n.updatedAt = state.updatedAt; state = n;
+    renderPlan(); renderQuote(); renderLibrary(); drawCard();
+  }, 60000);
+
+  // Cuenta: guarda el cuaderno en tu espacio privado cuando está disponible
+  if (window.claude && window.claude.use) {
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+      var db = r[0], user = r[1];
+      if (!db || !user) return null;
+      return user.id().then(function (id) {
+        if (!id) return null;
+        dbRef = db.collection('data/users/' + id).doc('cuaderno');
+        return dbRef.get();
+      });
+    }).then(function (snap) {
+      if (!dbRef) return;
+      setStore('Se guarda solo, en tu cuenta y en este navegador.');
+      if (snap && snap.exists) {
+        var remote = snap.data();
+        if (remote && remote.v === 1 && (Number(remote.updatedAt) || 0) > (state.updatedAt || 0)) {
+          state = normalize(JSON.parse(JSON.stringify(remote)));
+          state.updatedAt = Number(remote.updatedAt) || 0;
+          persistLocal(); renderAll();
+        } else if (state.updatedAt) { dirty = true; flush(); }
+      } else if (state.updatedAt) { dirty = true; flush(); }
+    }).catch(function () {});
+  }
+})();
+</script>
+
+</body></html>
